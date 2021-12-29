@@ -83,6 +83,14 @@ IFS=$'\n\t'
 # This loop runs till until we've started up successfully
 while true; do
 
+  # Check if syslog is running by recording it's PID (if it's not running $pid will be null):
+  pid=`pidof syslogd`
+  if [ -z "$pid" ]; then
+    syslogd
+  fi
+  # read syslog
+  tail -f /var/log/messages | grep 'rpc.mountd\|rpc.nfsd' &
+
   # Check if NFS is running by recording it's PID (if it's not running $pid will be null):
   pid=`pidof rpc.mountd`
 
@@ -106,6 +114,8 @@ while true; do
 
     echo "Starting NFS in the background..."
     /usr/sbin/rpc.nfsd --debug 8 --no-udp --no-nfs-version 2 --no-nfs-version 3
+    echo "Enabling NFS logging to syslog..."
+    rpcdebug -m nfsd -s all
     echo "Exporting File System..."
     if /usr/sbin/exportfs -rv; then
       /usr/sbin/exportfs
@@ -116,6 +126,8 @@ while true; do
     echo "Starting Mountd in the background..."These
     /usr/sbin/rpc.mountd --debug all --no-udp --no-nfs-version 2 --no-nfs-version 3
 # --exports-file /etc/exports
+    echo "Enabling Mountd logging to syslog..."
+    rpcdebug -m mountd -s all
 
     # Check if NFS is now running by recording it's PID (if it's not running $pid will be null):
     pid=`pidof rpc.mountd`
