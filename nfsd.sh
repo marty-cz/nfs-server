@@ -121,7 +121,7 @@ while true; do
       echo "Export validation failed, exiting..."
       exit 1
     fi
-    echo "Starting Mountd in the background..."These
+    echo "Starting Mountd in the background..."
     /usr/sbin/rpc.mountd --debug all --no-udp --no-nfs-version 2 --no-nfs-version 3
 # --exports-file /etc/exports
 
@@ -144,6 +144,8 @@ while true; do
 
 done
 
+mount -v > /old_mount_list
+
 while true; do
 
   # Check if NFS is STILL running by recording it's PID (if it's not running $pid will be null):
@@ -153,6 +155,15 @@ while true; do
   if [ -z "$pid" ]; then
     echo "NFS has failed, exiting, so Docker can restart the container..."
     break
+  fi
+
+  # monitor mounts for changes and report them
+  mount -v > /mount_list
+  diff_out=`diff -N /old_mount_list /mount_list`
+  if [ "$?" != "0" ]; then
+    echo "Mount changed! Old state vs new state:"
+    echo -e "$diff_out"
+    mv /mount_list /old_mount_list
   fi
 
   # If it is, give the CPU a rest
